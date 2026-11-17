@@ -241,8 +241,9 @@ function render(mon){
       const w=96/nL,left=2+b._lane*w,cf=cids.has(b.id);
       const cls=cf?"conflict":(confirmed(b.status)?"confirmed":"planned");
       const canEdit=(ME.role==="admin")||(String(b.created_by||"")===ME.user);
-      g+='<div class="block '+cls+'" data-id="'+b.id+'"'+(canEdit?' data-edit="1"':'')+' style="top:'+top+'px;height:'+hgt+'px;left:'+left+'%;width:'+w+'%" title="'+b.experiment+' — '+b.experimenter+'\n'+b.start+'-'+b.end+' · '+b.room+'\n'+(b.equipment||'')+(canEdit?'\n(click to edit)':'')+'">'+
-        (canEdit?'<span class="del" data-id="'+b.id+'">✕</span>':'')+'<div class="t">'+b.start+' '+b.experiment+'</div><div class="m">'+b.experimenter+' · '+b.room+'</div></div>';});
+      const adminMail=(ME.role==="admin"&&b.email)?(" · "+b.email):"";
+      g+='<div class="block '+cls+'" data-id="'+b.id+'"'+(canEdit?' data-edit="1"':'')+' style="top:'+top+'px;height:'+hgt+'px;left:'+left+'%;width:'+w+'%" title="'+b.experiment+' — '+b.experimenter+'\n'+b.start+'-'+b.end+' · '+b.room+'\n'+(b.equipment||'')+(adminMail?('\n✉ '+b.email):'')+(canEdit?'\n(click to edit)':'')+'">'+
+        (canEdit?'<span class="del" data-id="'+b.id+'">✕</span>':'')+'<div class="t">'+b.start+' '+b.experiment+'</div><div class="m">'+b.experimenter+' · '+b.room+adminMail+'</div></div>';});
     g+='</div>';});
   el("grid").innerHTML=g;
   el("grid").querySelectorAll(".del").forEach(x=>x.onclick=e=>{e.stopPropagation();delBooking(x.dataset.id);});
