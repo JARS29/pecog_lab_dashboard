@@ -34,7 +34,12 @@ header h1{margin:0;font-size:18px}header .sub{opacity:.85;font-size:12px}
 .daycol{position:relative;border-left:1px solid var(--line)}
 .daycol .h{height:48px;border-top:1px solid var(--line)}
 .block{position:absolute;border-radius:6px;padding:3px 5px;font-size:11px;overflow:hidden;border-left:4px solid var(--muted);background:#f1f5f9}
-.block .t{font-weight:600;line-height:1.15}.block .m{color:var(--muted);font-size:10px}
+.block{cursor:pointer}.block .t{font-weight:600;line-height:1.15}.block .m{color:var(--muted);font-size:10px}
+.block .eq{font-size:10px;color:var(--ink);opacity:.78;margin-top:2px;line-height:1.15;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:40}
+.mask.open{display:flex}.modal{background:#fff;border-radius:12px;padding:20px 22px;width:460px;max-width:92%}
+.modal h3{margin:0 0 12px}#dEquip li{font-size:13px;margin-bottom:3px}
+.closebtn{background:var(--brand);color:#fff;border:0;border-radius:8px;padding:9px 14px;font-weight:600;cursor:pointer}
 .block.confirmed{border-left-color:var(--confirmed);background:var(--confirmed-bg)}
 .block.planned{border-left-color:var(--planned);background:var(--planned-bg)}
 .block.conflict{border-left-color:var(--conflict);background:var(--conflict-bg);box-shadow:0 0 0 1px var(--conflict) inset}
@@ -46,7 +51,7 @@ header h1{margin:0;font-size:18px}header .sub{opacity:.85;font-size:12px}
 <body>
 <header>
   <img id="logo" alt="PECoG">
-  <div><h1>PECoG Lab — Schedule</h1><div class="sub">View only · no sign-in needed</div></div>
+  <div><h1>PECoG Lab — Schedule</h1></div>
 </header>
 <div class="wrap">
   <div class="toolbar">
@@ -64,6 +69,13 @@ header h1{margin:0;font-size:18px}header .sub{opacity:.85;font-size:12px}
   </div>
   <div class="note">This is a read-only schedule. To make or change a booking, open the booking dashboard and sign in.</div>
 </div>
+<div class="mask" id="dmask"><div class="modal">
+  <h3 id="dTitle">Booking</h3>
+  <div id="dMeta" style="font-size:13px;line-height:1.7;margin-bottom:12px"></div>
+  <div style="font-weight:600;font-size:11.5px;color:var(--muted);text-transform:uppercase;margin-bottom:5px">Equipment reserved</div>
+  <ul id="dEquip" style="margin:0 0 16px 18px;padding:0"></ul>
+  <div style="text-align:right"><button class="closebtn" id="dClose">Close</button></div>
+</div></div>
 <script>
 /* ===== CONFIG ===== */
 const DATA_URL = "https://script.google.com/macros/s/AKfycbx75BeaK8lhu6fqnCpi1NtMkf_E9tO_y75R4oNRbRoRkdoRFLgviBIhdZJ70EXXdYXT3Q/exec";
@@ -110,10 +122,21 @@ function render(mon){const f=filters(),today=iso(new Date());
     const nL=Math.max(1,laneEnd.length);g+='<div class="daycol">';for(let m=START_MIN;m<END_MIN;m+=60)g+='<div class="h"></div>';
     list.forEach(b=>{const top=(toMin(b.start)-START_MIN)*PXMIN,hgt=Math.max(16,(toMin(b.end)-toMin(b.start))*PXMIN-2);
       const w=96/nL,left=2+b._lane*w,cf=cids.has(b.id);const cls=cf?"conflict":(confirmed(b.status)?"confirmed":"planned");
-      g+='<div class="block '+cls+'" style="top:'+top+'px;height:'+hgt+'px;left:'+left+'%;width:'+w+'%" title="'+b.experiment+'\n'+b.start+'-'+b.end+' · '+b.room+'\n'+(b.equipment||'')+'">'+
-        '<div class="t">'+b.start+' '+b.experiment+'</div><div class="m">'+b.experimenter+' · '+b.room+'</div></div>';});
+      const eqs=String(b.equipment||"").split(",").map(x=>x.trim()).filter(Boolean);
+      g+='<div class="block '+cls+'" data-id="'+b.id+'" style="top:'+top+'px;height:'+hgt+'px;left:'+left+'%;width:'+w+'%" title="Click for details">'+
+        '<div class="t">'+b.start+' '+b.experiment+'</div><div class="m">'+b.experimenter+' · '+b.room+'</div>'+
+        (eqs.length?'<div class="eq">'+eqs.join(", ")+'</div>':'')+'</div>';});
     g+='</div>';});
-  el("grid").innerHTML=g;}
+  el("grid").innerHTML=g;
+  el("grid").querySelectorAll(".block").forEach(bl=>bl.onclick=()=>{const b=(DATA.bookings||[]).find(x=>String(x.id)===String(bl.dataset.id));if(b)showDetails(b);});}
+function showDetails(b){
+  el("dTitle").textContent=b.experiment||"Booking";
+  el("dMeta").innerHTML='<b>Who:</b> '+(b.experimenter||'')+'<br><b>When:</b> '+b.date+', '+b.start+'–'+b.end+'<br><b>Room:</b> '+(b.room||'')+'<br><b>Status:</b> '+(b.status||'');
+  var eqs=String(b.equipment||"").split(",").map(x=>x.trim()).filter(Boolean);
+  el("dEquip").innerHTML=eqs.length?eqs.map(e=>'<li>'+e+'</li>').join(""):'<li style="list-style:none;color:var(--muted)">(none)</li>';
+  el("dmask").classList.add("open");}
+el("dClose").onclick=()=>el("dmask").classList.remove("open");
+el("dmask").onclick=e=>{if(e.target===el("dmask"))el("dmask").classList.remove("open");};
 el("prev").onclick=()=>{if(weekOffset>-MAX_BACK){weekOffset--;updateNav();loadWeek();}};
 el("next").onclick=()=>{if(weekOffset<MAX_AHEAD){weekOffset++;updateNav();loadWeek();}};
 function updateNav(){el("prev").disabled=weekOffset<=-MAX_BACK;el("next").disabled=weekOffset>=MAX_AHEAD;}
